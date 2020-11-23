@@ -1,0 +1,3 @@
+2020.11.23, Mon
+- First version of My Makefile for installation of chroma and packages (qmp,qio,qla,qdp,qopqdp,qdp++);
+  The cpu type works successfully on HPC@PKU

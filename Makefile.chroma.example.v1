@@ -1,0 +1,221 @@
+# ============================ Makefile for chroma ============================
+# Brief:
+# 	Ons-Step Installation.
+# Usage:
+# 	If 'GitFlag' turns 'ON', you will git clone source package from Github .
+# 	In principle, when 'GitGlag' turns 'ON' or source packages are prepared,
+# 	chroma with all packages wil be installed by one step as below:
+#	$ make
+#	then, times for many cups of coffee and papers. 
+#	Also, you can install them step by step.
+#						by  Ke-Long Zhang, 2020.11.20
+# =============================================================================
+
+# === General Options ===
+PRECISION = single
+PRECISION = double
+# 'cpu' or 'quda' le
+ChromaType= quda
+# 'ON'  or 'OFF'da
+GitFlag   = OFF
+qdpxx_Src_Dir= ${PACKAGE_PATH}/qdpxx-${PRECISION}/src
+qdpxx_Ins_Dir= ${PACKAGE_PATH}/qdpxx-${PRECISION}
+
+# === Source Path and Installation Path set-up ===
+PACKAGE_PATH= /public/home/kelong/software/chroma/packages
+CHROMA_PATH = /public/home/kelong/software/chroma
+# QUDA_PATH   = /public/home/kelong/software/quda/build_quda_rocm
+QUDA_PATH   = /public/home/ybyang/soft/stable/quda
+# packages path set-up
+qmp_Src_Dir   = ${PACKAGE_PATH}/qmp/src
+qmp_Ins_Dir   = ${PACKAGE_PATH}/qmp
+qio_Src_Dir   = ${PACKAGE_PATH}/qio/src
+qio_Ins_Dir   = ${PACKAGE_PATH}/qio
+qla_Src_Dir   = ${PACKAGE_PATH}/qla/src
+qla_Ins_Dir   = ${PACKAGE_PATH}/qla
+qdp_Src_Dir   = ${PACKAGE_PATH}/qdp/src
+qdp_Ins_Dir   = ${PACKAGE_PATH}/qdp
+qopqdp_Src_Dir= ${PACKAGE_PATH}/qopqdp/src
+qopqdp_Ins_Dir= ${PACKAGE_PATH}/qopqdp
+# quda
+quda_Src_Dir  = ${QUDA_PATH}/src
+quda_Ins_Dir  = ${QUDA_PATH}/quda_${PRECISION}
+# chroma path
+chroma_Src_Dir= ${CHROMA_PATH}/chroma_${ChromaType}_${PRECISION}/src
+chroma_Ins_Dir= ${CHROMA_PATH}/chroma_${ChromaType}_${PRECISION}
+
+# === Option flags set-up ===
+# qmp 
+qmp_FLAGS  = --prefix=${qmp_Ins_Dir}  
+qmp_FLAGS += --with-qmp-comms-type=MPI  CC=mpicc CXX=mpicxx 
+qmp_FLAGS += CXXFLAGS="-fopenmp -D_REENTRANT -g -O3 -finline-limit=50000 -std=c++11 -mavx2" 
+qmp_FLAGS += CFLAGS="-fopenmp -D_REENTRANT -g -O3 -std=gnu99" 
+
+# qio 
+qio_FLAGS  = --prefix=${qio_Ins_Dir} 
+qio_FLAGS += --with-qmp=${qmp_Ins_Dir} -enable-largefile -enable-dml-output-buffering
+qio_FLAGS += CC=mpicc CXX=mpicxx CFLAGS="-fopenmp -D_REENTRANT -g -O3 -std=gnu99"
+
+# qla
+qla_FLAGS  = --prefix=${qla_Ins_Dir}
+qla_FLAGS += --enable-sse3 --enable-temp-precision=D 
+qla_FLAGS += CC=mpicc CXX=mpicxx
+qla_FLAGS += CFLAGS="-Wall -std=gnu99 -O3 -mfpmath=sse -ffast-math -funroll-loops -fprefetch-loop-arrays -fomit-frame-pointer"
+
+# qdp
+qdp_FLAGS = --prefix=${qdp_Ins_Dir}
+qdp_FLAGS+= --with-qmp=${qmp_Ins_Dir} --with-qio=${qio_Ins_Dir} --with-qla=${qla_Ins_Dir}  
+qdp_FLAGS+= CC=mpicc CXX=mpicxx  --enable-sse
+qdp_FLAGS+= CFLAGS="-Wall -std=gnu99 -O3 -fargument-noalias-global -funroll-all-loops -fpeel-loops -ftree-vectorize"
+
+# qopqdp`
+qopqdp_FLAGS  = --prefix=${qopqdp_Ins_Dir}
+qopqdp_FLAGS += --with-qmp=${qmp_Ins_Dir} --with-qio=${qio_Ins_Dir}
+qopqdp_FLAGS += --with-qla=${qla_Ins_Dir} --with-qdp=${qdp_Ins_Dir}
+qopqdp_FLAGS += CC=mpicc CXX=mpicxx --enable-underscores 
+qopqdp_FLAGS += CFLAGS="-fopenmp -D_REENTRANT -g -std=gnu99 -O3"
+
+# qdpxx
+qdpxx_FLAGS = --prefix=${qdpxx_Ins_Dir}
+qdpxx_FLAGS+= --with-qmp=${qmp_Ins_Dir} --enable-precision=${PRECISION}  
+qdpxx_FLAGS+= --enable-parallel-io --enable-parallel-arch=parscalar
+qdpxx_FLAGS+= --enable-largefile   --enable-dml-output-buffering 
+qdpxx_FLAGS+= CC=mpicc CXX=mpicxx  --enable-sse2 --enable-openmp 
+qdpxx_FLAGS+= CFLAGS="-fopenmp -D_REENTRANT -g -std=gnu99 -O3 -mfpmath=sse -ffast-math -funroll-loops -fprefetch-loop-arrays -fomit-frame-pointer -ftree-vectorize -fassociative-math"
+qdpxx_FLAGS+= CXXFLAGS="-fopenmp -D_REENTRANT -g -std=c++11 -O3 -mfpmath=sse -ffast-math -funroll-loops -fprefetch-loop-arrays -fomit-frame-pointer -ftree-vectorize -fassociative-math"
+
+# chroma
+chroma_FLAGS = --prefix=${chroma_Ins_Dir}
+chroma_FLAGS+= --with-qmp=${qmp_Ins_Dir}   --with-qio=${qio_Ins_Dir} 
+chroma_FLAGS+= --with-qdp=${qdpxx_Ins_Dir} --with-qla=${qla_Ins_Dir}
+chroma_FLAGS+= --with-qdpc=${qdp_Ins_Dir}  --with-qopqdp=${qopqdp_Ins_Dir}
+chroma_FLAGS+= --enable-precision=${PRECISION} 
+chroma_FLAGS+= --enable-qop-mg --enable-parallel-arch=parscalar
+chroma_FLAGS+= --enable-sse3   --enable-sse-wilson-dslash 
+chroma_FLAGS+= FC=mpif90 CC=mpicc CXX=mpicxx
+chroma_FLAGS+= CFLAGS="-fopenmp -D_REENTRANT -g -std=gnu99 -O3 -mfpmath=sse -ffast-math -funroll-loops -fprefetch-loop-arrays -fomit-frame-pointer -ftree-vectorize -fassociative-math"
+chroma_FLAGS+= CXXFLAGS="-fopenmp -D_REENTRANT -g -std=c++11 -O3 -mfpmath=sse -ffast-math -funroll-loops -fprefetch-loop-arrays -fomit-frame-pointer -ftree-vectorize -fassociative-math -fpermissive"
+ifeq (${ChromaType},quda)
+chroma_FLAGS+= --with-quda=${QUDA_PATH}
+endif
+
+
+# build.log
+LOG_MAKE = VERBOSE=1 2>&1 | tee make.log
+LOG_BUILD= VERBOSE=1 2>&1 | tee build.log
+
+
+
+# === Targets ===
+# target
+ifeq (${ChromaType},quda)
+chroma_FLAGS+= --with-quda=${quda_path}
+install_all: install_chroma  install_quda  install_qdpxx install_qopdp  install_qdp install_qla  install_qio  install_qmp
+else
+install_all: install_chroma  install_qdpxx install_qopdp install_qdp install_qla  install_qio  install_qmp
+endif
+
+
+# sub-targets
+install_qmp:
+ifeq (${GitFlag},ON) 
+	git clone --recursive https://github.com/usqcd-software/qmp.git  ${qmp_Src_Dir}
+	# cd ${PACKAGE_PATH}/qmp/src   && git pull 
+else
+	echo "GitFlag = OFF: Src existed. "
+endif
+	mkdir ${PACKAGE_PATH}/qmp/build -p
+	cd ${qmp_Src_Dir}   && autoreconf -f
+	cd ${qmp_Ins_Dir}/build && ${qmp_Src_Dir}/configure  ${qmp_FLAGS} \
+	   && make -j ${LOG_MAKE} && make install ${LOG_BUILD} 
+
+
+install_qio:
+ifeq (${GitFlag},ON) 
+	git clone --recursive https://github.com/usqcd-software/qio.git  ${qio_Src_Dir}
+	# cd ${qio_Src_Dir}   && git pull 
+else
+	echo "GitFlag = OFF: Src existed. "
+endif
+	mkdir ${PACKAGE_PATH}/qio/build -p
+	cd ${qio_Src_Dir}   && autoreconf -f
+	cd ${qio_Ins_Dir}/build && ${qio_Src_Dir}/configure  ${qio_FLAGS} \
+	   && make -j ${LOG_MAKE} && make install ${LOG_BUILD}
+
+
+install_qla:
+ifeq (${GitFlag},ON) 
+	git clone --recursive https://github.com/usqcd-software/qla.git  ${qla_Src_Dir}
+	# cd ${qla_Src_Dir}   && git pull 
+else
+	echo "GitFlag = OFF: Src existed. "
+endif
+	mkdir ${qla_Ins_Dir}/build -p
+	cd ${qla_Src_Dir}   && autoreconf -f
+	cd ${qla_Ins_Dir}/build && ${qla_Src_Dir}/configure  ${qla_FLAGS} \
+	   && make -j ${LOG_MAKE} && make install ${LOG_BUILD}
+
+
+install_qdp:
+ifeq (${GitFlag},ON) 
+	git clone --recursive https://github.com/usqcd-software/qdp.git  ${qdp_Src_Dir}
+	# cd ${qdp_Src_Dir}   && git pull 
+else
+	echo "GitFlag = OFF: Src existed. "
+endif
+	mkdir ${qdp_Ins_Dir}/build -p
+	cd ${qdp_Src_Dir}   && autoreconf -f
+	cd ${qdp_Ins_Dir}/build && ${qdp_Src_Dir}/configure  ${qdp_FLAGS} \
+	   && make -j ${LOG_MAKE} && make install ${LOG_BUILD}
+
+
+install_qopqdp:
+ifeq (${GitFlag},ON) 
+	git clone --recursive https://github.com/usqcd-software/qopqdp.git  ${qopqdp_Src_Dir}
+	# cd ${qopqdp_Src_Dir}   && git pull 
+else
+	echo "GitFlag = OFF: Src existed. "
+endif
+	mkdir ${qopqdp_Ins_Dir}/build -p
+	cd ${qopqdp_Src_Dir}   && autoreconf -f
+	cd ${qopqdp_Ins_Dir}/build && ${qopqdp_Src_Dir}/configure  ${qopqdp_FLAGS} \
+	   && make -j ${LOG_MAKE} && make install ${LOG_BUILD}
+
+
+install_qdpxx:
+ifeq (${GitFlag},ON) 
+	git clone --recursive https://github.com/usqcd-software/qdpxx.git  ${qdpxx_Src_Dir}
+	# cd ${qdpxx_Src_Dir}   && git pull 
+else
+	echo "GitFlag = OFF: Src existed. "
+endif
+	mkdir ${qdpxx_Ins_Dir}/build -p
+	cd ${qdpxx_Src_Dir}   && autoreconf -f
+	cd ${qdpxx_Ins_Dir}/build && ${qdpxx_Src_Dir}/configure  ${qdpxx_FLAGS} \
+	   && make -j ${LOG_MAKE} && make install ${LOG_BUILD}
+
+
+install_quda:
+	# make cmake
+	# make hack
+	# make build
+
+
+install_chroma:
+ifeq (${GitFlag},ON) 
+	# git clone --recursive https://github.com/JeffersonLab/chroma.git  ${chroma_Src_Dir}
+	cd ${chroma_Src_Dir} &&  git checkout devel
+	#   && git pull 
+else
+	echo "GitFlag = OFF: Src existed." 
+endif
+	mkdir ${chroma_Ins_Dir}/build -p
+	cd ${chroma_Src_Dir}   && autoreconf -f
+	cd ${chroma_Ins_Dir}/build && ${chroma_Src_Dir}/configure  ${chroma_FLAGS} \
+	   && make -j 8 ${LOG_MAKE} && make install ${LOG_BUILD}
+	#./autogen.sh
+
+
+.PHONY: install_all
+.PHONY: install_qmp install_qio  install_qla  install_qdp install_qopdp  install_qdpxx install_chroma
+
