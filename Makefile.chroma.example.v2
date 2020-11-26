@@ -20,13 +20,15 @@ Target:
 	make install_qdp 
 	make install_qopqdp 
 	make install_qdpxx 
+	make install_quda 
 	make install_chroma
  
 
 # === General Options ===
 PRECISION = single
-ChromaType= cpu
+ChromaType= gpu
 GitFlag   = ON
+GPU_ARCH  = sm_70
 
 
 # === Targets ===
@@ -62,8 +64,8 @@ qopqdp_Ins_Dir= ${PACKAGE_PATH}/qopqdp
 qdpxx_Src_Dir = ${PACKAGE_PATH}/qdpxx/${PRECISION}/src
 qdpxx_Ins_Dir = ${PACKAGE_PATH}/qdpxx/${PRECISION}
 # quda
-quda_Src_Dir  = ${QUDA_PATH}/src
-quda_Ins_Dir  = ${QUDA_PATH}/quda_${PRECISION}
+quda_Src_Dir  = ${PACKAGE_PATH}/quda/src
+quda_Ins_Dir  = ${PACKAGE_PATH}/quda
 # chroma path
 chroma_Src_Dir= ${CHROMA_PATH}/${ChromaType}_${PRECISION}/src
 chroma_Ins_Dir= ${CHROMA_PATH}/${ChromaType}_${PRECISION}
@@ -78,9 +80,11 @@ ifeq (${GitFlag},ON)
 	git clone --recursive https://github.com/usqcd-software/qdp.git  ${qdp_Src_Dir}
 	git clone --recursive https://github.com/usqcd-software/qopqdp.git ${qopqdp_Src_Dir}
 	git clone --recursive https://github.com/usqcd-software/qdpxx.git  ${qdpxx_Src_Dir}
-	cd ${qdpxx_Src_Dir} &&  git checkout devel
+	cd ${qdpxx_Src_Dir}   &&  git checkout devel
+	git clone --recursive https://github.com/lattice/quda  ${quda_Src_Dir}
+	cd ${quda_Src_Dir}    &&  git checkout devel
 	git clone --recursive https://github.com/JeffersonLab/chroma.git   ${chroma_Src_Dir}
-	cd ${chroma_Src_Dir} &&  git checkout devel
+	cd ${chroma_Src_Dir}  &&  git checkout devel
 	echo "  Git clone ****.git, done! "
 else
 	echo "  GitFlag = OFF. "
@@ -94,6 +98,7 @@ ifeq (${GitFlag},ON)
 	cd ${qdp_Src_Dir}    &&  git status
 	cd ${qopqdp_Src_Dir} &&  git status
 	cd ${qdpxx_Src_Dir}  &&  git status 
+	cd ${quda_Src_Dir}   &&  git status
 	cd ${chroma_Src_Dir} &&  git status
 	echo "Git pull or checkout ****.git, done! "
 else
@@ -200,11 +205,30 @@ install_qdpxx:
 	cd ${qdpxx_Ins_Dir}/build  && echo " $(shell date)" > DATE
 
 
+
+# === quda ===
+EIGEN_INCLUDE_DIR= ${HOME}/software/eigen/eigen-3.3.8
+quda_FLAGS = -S${quda_Src_Dir} -B${quda_Ins_Dir}/build   -DCMAKE_INSTALL_PREFIX=${quda_Ins_Dir}
+quda_FLAGS+= -DQUDA_QMP=ON -DQUDA_QMPHOME=${qmp_Ins_Dir} -DQUDA_MPI=OFF 
+quda_FLAGS+= -DQUDA_QIO=ON -DQUDA_QIOHOME=${qio_Ins_Dir} -DQUDA_LIMEHOME=${qio_Ins_Dir}
+quda_FLAGS+= -DQUDA_GPU_ARCH=${GPU_ARCH}
+quda_FLAGS+= -DQUDA_DIRAC_STAGGERED=ON    -DQUDA_DIRAC_DOMAIN_WALL=OFF
+quda_FLAGS+= -DQUDA_DIRAC_TWISTED_MASS=ON -DQUDA_LINK_HISQ=OFF      
+quda_FLAGS+= -DQUDA_MULTIGRID=ON          -DQUDA_INTERFACE_MILC=OFF 
+quda_FLAGS+= -DQUDA_BUILD_ALL_TESTS=ON    -DQUDA_BUILD_SHAREDLIB=ON 
+quda_FLAGS+= -DQUDA_TEX=OFF               -DCMAKE_BUILD_TYPE=DEVEL
+quda_FLAGS+= -DQUDA_DOWNLOAD_EIGEN=OFF    -DQUDA_USE_EIGEN=ON    -DEIGEN_INCLUDE_DIR=${EIGEN_INCLUDE_DIR}
+
+quda_build=${quda_Ins_Dir}/build
+
 install_quda:
-	# make cmake
-	# make hack
-	# make build
-	#   && echo "Done Successfully ! $(shell date)" > SUCCESS
+	mkdir ${quda_build} -p
+	rm ${quda_build}/* -rf
+	cd ${quda_build} && cmake  ${quda_FLAGS}
+	cd ${quda_build} && MPICC=mpicc MPICXX=mpicxx  make -j 8  ${LOG_MAKE}
+	cd ${quda_build} && make install  ${LOG_BUILD}
+	cd ${quda_build} && echo " $(shell date)" > DATE
+	
 
 
 # === chroma ===
@@ -216,10 +240,10 @@ chroma_FLAGS+= --enable-precision=${PRECISION}
 chroma_FLAGS+= --enable-qop-mg --enable-parallel-arch=parscalar
 chroma_FLAGS+= --enable-sse --enable-sse3   --enable-sse-wilson-dslash 
 ifeq (${ChromaType},quda)
-    chroma_FLAGS+= --with-quda=${QUDA_PATH}
+    chroma_FLAGS+= --with-quda=${QUDA_PATH} --with-cuda=/gpfs/share/software/cuda/cuda-9.0
 endif
 ifeq (${ChromaType},gpu)
-    chroma_FLAGS+= --with-quda=${QUDA_PATH}
+    chroma_FLAGS+= --with-quda=${QUDA_PATH} --with-cuda=/gpfs/share/software/cuda/cuda-9.0
 endif
 
 install_chroma:
@@ -230,10 +254,13 @@ install_chroma:
             CFLAGS="-fopenmp -D_REENTRANT -g -std=gnu99 -O3 -mfpmath=sse -ffast-math -funroll-loops -fprefetch-loop-arrays -fomit-frame-pointer -ftree-vectorize -fassociative-math"  \
             CXXFLAGS="-fopenmp -D_REENTRANT -g -std=c++11 -O3 -mfpmath=sse -ffast-math -funroll-loops -fprefetch-loop-arrays -fomit-frame-pointer -ftree-vectorize -fassociative-math -fpermissive"
 	cd ${chroma_Ins_Dir}/build && make -j 8 ${LOG_MAKE} && make install ${LOG_BUILD} 
-	cd ${chroma_Ins_Dir}/build && echo "Done Successfully ! $(shell date)" > SUCCESS
+	cd ${chroma_Ins_Dir}/build && echo " $(shell date)" > DATE
 	#./autogen.sh
 
 
 .PHONY: Target chroma
 .PHONY: install_qmp install_qio  install_qla  install_qdp install_qopdp  install_qdpxx install_chroma
+
+
+
 
