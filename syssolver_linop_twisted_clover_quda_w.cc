@@ -8,7 +8,7 @@
 #include "actions/ferm/invert/syssolver_linop_factory.h"
 #include "actions/ferm/invert/syssolver_linop_aggregate.h"
 #include "actions/ferm/invert/quda_solvers/syssolver_quda_clover_params.h"
-#include "actions_ex/target_quda/syssolver_linop_clover_quda_w.h"
+#include "actions_ex/target_quda/syssolver_linop_twisted_clover_quda_w.h"
 #include "io/aniso_io.h"
 
 
@@ -154,7 +154,6 @@ namespace Chroma
     // OK Here I have a chance to test directly 
     // Even Target Checkerboard, No Dagger
     psi_s = zero;
-    // quda_inv_param.dslash_type = QUDA_CLOVER_WILSON_DSLASH; // Sets Clover Matrix    
     quda_inv_param.dslash_type = QUDA_TWISTED_CLOVER_DSLASH; // Sets Clover Matrix    
     dslashQuda(spinorOut, spinorIn, &quda_inv_param, 0, 0);
 

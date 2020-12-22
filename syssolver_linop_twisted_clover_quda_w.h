@@ -3,8 +3,8 @@
  *  \brief Solve a MdagM*psi=chi linear system by BiCGStab
  */
 
-#ifndef __syssolver_linop_quda_clover_v2_h__
-#define __syssolver_linop_quda_clover_v2_h__
+#ifndef __syssolver_linop_quda_twisted_clover_h__
+#define __syssolver_linop_quda_twisted_clover_h__
 
 #include "chroma_config.h"
 
@@ -72,13 +72,13 @@ namespace Chroma
 					 const SysSolverQUDACloverParams& invParam_) : 
       A(A_), invParam(invParam_), clov(new CloverTermT<T, U>::Type_t() ), invclov(new CloverTermT<T, U>::Type_t())
 #else      
-    LinOpSysSolverQUDAClover2(Handle< LinearOperator<T> > A_,
+    LinOpSysSolverQUDATwistedClover(Handle< LinearOperator<T> > A_,
 					 Handle< FermState<T,Q,Q> > state_,
 					 const SysSolverQUDACloverParams& invParam_) : 
       A(A_), invParam(invParam_), clov(new CloverTermT<T, U>() ), invclov(new CloverTermT<T, U>() )
 #endif      
     {
-      QDPIO::cout << "LinOpSysSolverQUDAClover2:" << std::endl;
+      QDPIO::cout << "LinOpSysSolverQUDATwistedClover:" << std::endl;
 
       // FOLLOWING INITIALIZATION in test QUDA program
 
@@ -245,7 +245,6 @@ namespace Chroma
   
       // Now onto the inv param:
       // Dslash type
-      // quda_inv_param.dslash_type = QUDA_CLOVER_WILSON_DSLASH;
       quda_inv_param.dslash_type = QUDA_TWISTED_CLOVER_DSLASH;
 
       // Invert type:
@@ -567,7 +566,7 @@ namespace Chroma
     
 
     //! Destructor is automatic
-    ~LinOpSysSolverQUDAClover2() 
+    ~LinOpSysSolverQUDATwistedClover() 
     {
       QDPIO::cout << "Destructing" << std::endl;
       freeGaugeQuda();
@@ -651,7 +650,7 @@ namespace Chroma
 
   private:
     // Hide default constructor
-    LinOpSysSolverQUDAClover2() {}
+    LinOpSysSolverQUDATwistedClover() {}
     
 #if 1
     Q links_orig;
