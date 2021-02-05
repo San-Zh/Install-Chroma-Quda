@@ -8,70 +8,75 @@
 #	$ make
 #	then, times for many cups of coffee and papers. 
 #	Also, you can install them step by step.
-#						by  Ke-Long Zhang, 2020.11.20
+#							by  Ke-Long Zhang, 2020.11.20
 #					v2      by  Ke-Long Zhang, 2020.11.23
+#					v3      by  Ke-Long Zhang, 2021.02.05
 # =============================================================================
 
-# === Default Target ===
-Target:  
-	make install_qmp
-	make install_qio 
-	make install_qla 
-	make install_qdp 
-	make install_qopqdp 
-	make install_qdpxx 
-	make install_quda 
-	make install_chroma
  
+# ============================= General Options ===============================
 
-# === General Options ===
 PRECISION = single
-ChromaType= gpu
+ChromaType= tw_quda
 GitFlag   = ON
-GPU_ARCH  = sm_70
+GPU_ARCH  = sm_61
 
+CUDA_PATH =/usr
+EIGEN_PATH=/opt/math/eigen3
+LIBXML= /opt/libxml2/2.9.10
 
-# === Targets ===
+LOG_MAKE = VERBOSE=1 2>&1 | tee make.log
+LOG_BUILD= VERBOSE=1 2>&1 | tee build.log
+
+# ============================= Default Target =================================
 chroma: 
+	make gitclone
 	make install_qmp
 	make install_qio 
 	make install_qla 
 	make install_qdp 
 	make install_qopqdp 
 	make install_qdpxx 
-ifeq (${ChromaType},quda)
+ifeq (${ChromaType},chroma_quda)
+	make install_quda 
+endif
+ifeq (${ChromaType},chroma_gpu)
 	make install_quda 
 endif
 	make install_chroma
 
 
-# === Source-Path and Install-Path set-up ===
-SOFT_PATH   = ${HOME}/zhangkelong/software
+
+
+#------------------- Source-Path and Install-Path set-up ------------------
+SOFT_PATH   = /opt/LQCD
 PACKAGE_PATH= ${SOFT_PATH}/chroma/packages
 CHROMA_PATH = ${SOFT_PATH}/chroma
 QUDA_PATH   = ${SOFT_PATH}/quda
-# packages path set-up
-qmp_Src_Dir   = ${PACKAGE_PATH}/qmp/src
+
+qmp_Src_Dir   = ${PACKAGE_PATH}/src/qmp
+qio_Src_Dir   = ${PACKAGE_PATH}/src/qio
+qla_Src_Dir   = ${PACKAGE_PATH}/src/qla
+qdp_Src_Dir   = ${PACKAGE_PATH}/src/qdp
+qopqdp_Src_Dir= ${PACKAGE_PATH}/src/qopqdp
+qdpxx_Src_Dir = ${PACKAGE_PATH}/src/qdpx
+quda_Src_Dir  = ${PACKAGE_PATH}/src/quda
+chroma_Src_Dir= ${PACKAGE_PATH}/src/chroma_twisted
+
 qmp_Ins_Dir   = ${PACKAGE_PATH}/qmp
-qio_Src_Dir   = ${PACKAGE_PATH}/qio/src
 qio_Ins_Dir   = ${PACKAGE_PATH}/qio
-qla_Src_Dir   = ${PACKAGE_PATH}/qla/src
 qla_Ins_Dir   = ${PACKAGE_PATH}/qla
-qdp_Src_Dir   = ${PACKAGE_PATH}/qdp/src
 qdp_Ins_Dir   = ${PACKAGE_PATH}/qdp
-qopqdp_Src_Dir= ${PACKAGE_PATH}/qopqdp/src
 qopqdp_Ins_Dir= ${PACKAGE_PATH}/qopqdp
-qdpxx_Src_Dir = ${PACKAGE_PATH}/qdpxx/${PRECISION}/src
 qdpxx_Ins_Dir = ${PACKAGE_PATH}/qdpxx/${PRECISION}
-# quda
-quda_Src_Dir  = ${PACKAGE_PATH}/quda/src
-quda_Ins_Dir  = ${PACKAGE_PATH}/quda
+quda_Ins_Dir  = ${PACKAGE_PATH}/quda/${GPU_ARCH}
 # chroma path
-chroma_Src_Dir= ${CHROMA_PATH}/${ChromaType}_${PRECISION}/src
-chroma_Ins_Dir= ${CHROMA_PATH}/${ChromaType}_${PRECISION}
+chroma_Ins_Dir= ${CHROMA_PATH}/Chroma_${ChromaType}_${PRECISION}
 
 
-# === git clone && git status ===
+
+
+#------------------------- Git Clone && Git Status ----------------------------------
 gitclone:
 ifeq (${GitFlag},ON) 
 	git clone --recursive https://github.com/usqcd-software/qmp.git  ${qmp_Src_Dir}
@@ -82,13 +87,15 @@ ifeq (${GitFlag},ON)
 	git clone --recursive https://github.com/usqcd-software/qdpxx.git  ${qdpxx_Src_Dir}
 	cd ${qdpxx_Src_Dir}   &&  git checkout devel
 	git clone --recursive https://github.com/lattice/quda  ${quda_Src_Dir}
-	cd ${quda_Src_Dir}    &&  git checkout devel
+	cd ${quda_Src_Dir}    &&  git checkout develop
 	git clone --recursive https://github.com/JeffersonLab/chroma.git   ${chroma_Src_Dir}
 	cd ${chroma_Src_Dir}  &&  git checkout devel
 	echo "  Git clone ****.git, done! "
 else
 	echo "  GitFlag = OFF. "
 endif
+
+
 
 gitstatus:
 ifeq (${GitFlag},ON) 
@@ -105,12 +112,14 @@ else
 	echo "GitFlag = OFF. "
 endif
 
-# === make.log & uild.log ===
-LOG_MAKE = VERBOSE=1 2>&1 | tee make.log
-LOG_BUILD= VERBOSE=1 2>&1 | tee build.log
 
-# === Sub Steps and install targets === #
-# === qmp === 
+
+
+
+#-------------------------------------------------------------------------
+# Sub Steps and Install Targets
+
+#------------------------------ qmp --------------------------------------
 qmp_FLAGS  = --prefix=${qmp_Ins_Dir}  
 qmp_FLAGS += --with-qmp-comms-type=MPI
 
@@ -124,7 +133,9 @@ install_qmp:
 	cd ${qmp_Ins_Dir}/build && echo " $(shell date)" > Date
 
 
-# === qio ===
+
+
+#----------------------------- qio ----------------------------------------
 qio_FLAGS  = --prefix=${qio_Ins_Dir} 
 qio_FLAGS += --with-qmp=${qmp_Ins_Dir} 
 qio_FLAGS += --enable-largefile --enable-dml-output-buffering --enable-parallel-io 
@@ -139,21 +150,26 @@ install_qio:
             && echo "$(shell date)" > DATE
 
 
-# === qla === --enable-sse2 -msse2  --enable-openmp
+
+
+#------------------------------- qla --------------------------------------
+#--enable-sse2 -msse2  --enable-openmp
 qla_FLAGS  = --prefix=${qla_Ins_Dir}
 qla_FLAGS += --enable-temp-precision=D --enable-sse3   
 
 install_qla:
 	mkdir ${qla_Ins_Dir}/build -p
-	cd ${qla_Src_Dir}   &&  autoconf
+	cd ${qla_Src_Dir}   &&  autoreconf -f
 	cd ${qla_Ins_Dir}/build && ${qla_Src_Dir}/configure  ${qla_FLAGS} \
             CC="mpicc" \
             CFLAGS="-Wall -fopenmp -std=gnu99 -O3 -mfpmath=sse -ffast-math -funroll-loops -fprefetch-loop-arrays -fomit-frame-pointer"
-	cd ${qla_Ins_Dir}/build   && make ${LOG_MAKE}  && make install ${LOG_BUILD} \
+	cd ${qla_Ins_Dir}/build   && make -j 8 ${LOG_MAKE}  && make install ${LOG_BUILD} \
 	   && echo " $(shell date)" > DATE
 
 
-# === qdp ===
+
+
+#-------------------------------- qdp --------------------------------------
 qdp_FLAGS  = --prefix=${qdp_Ins_Dir}
 qdp_FLAGS += --with-qmp=${qmp_Ins_Dir} --with-qio=${qio_Ins_Dir} --with-qla=${qla_Ins_Dir}  
 qdp_FLAGS += --enable-sse
@@ -170,7 +186,9 @@ install_qdp:
 	   && echo "$(shell date)" > DATE
 
 
-# === qopqdp`===
+
+
+#-------------------------------- qopqdp -----------------------------------
 qopqdp_FLAGS  = --prefix=${qopqdp_Ins_Dir}
 qopqdp_FLAGS += --with-qmp=${qmp_Ins_Dir} --with-qio=${qio_Ins_Dir}
 qopqdp_FLAGS += --with-qla=${qla_Ins_Dir} --with-qdp=${qdp_Ins_Dir}
@@ -179,35 +197,39 @@ qopqdp_FLAGS += --enable-underscores
 
 install_qopqdp:
 	mkdir ${qopqdp_Ins_Dir}/build -p
-	# cd ${qopqdp_Src_Dir}   && autoreconf -f
+	cd ${qopqdp_Src_Dir}   && autoreconf -f
 	cd ${qopqdp_Ins_Dir}/build \
 	    && ${qopqdp_Src_Dir}/configure  ${qopqdp_FLAGS} \
 	    CC="mpicc" CXX="mpicxx" CFLAGS="-fopenmp -D_REENTRANT -g -std=gnu99 -O3"
-	cd ${qopqdp_Ins_Dir}/build  && make  ${LOG_MAKE} && make install ${LOG_BUILD}
+	cd ${qopqdp_Ins_Dir}/build  && make -j 4 ${LOG_MAKE} && make install ${LOG_BUILD}
 	cd ${qopqdp_Ins_Dir}/build  && echo " $(shell date)" >  DATE
 
 
-# === qdpxx ===
+
+
+#--------------------------------- qdpxx -----------------------------------
 qdpxx_FLAGS = --prefix=${qdpxx_Ins_Dir}
 qdpxx_FLAGS+= --with-qmp=${qmp_Ins_Dir} --enable-precision=${PRECISION}  
+qdpxx_FLAGS+= --with-libxml2=${LIBXML}
 qdpxx_FLAGS+= --enable-parallel-io --enable-parallel-arch=parscalar
 qdpxx_FLAGS+= --enable-largefile   --enable-dml-output-buffering  
 qdpxx_FLAGS+= --enable-sse --enable-sse3 --enable-openmp
-# 
+
 install_qdpxx:
 	mkdir ${qdpxx_Ins_Dir}/build -p
-	cd ${qdpxx_Src_Dir}   && aclocal && autoreconf -f
+	cd ${qdpxx_Src_Dir}    && autoreconf -f
 	cd ${qdpxx_Ins_Dir}/build && ${qdpxx_Src_Dir}/configure  ${qdpxx_FLAGS} \
 	    CC="mpicc" CXX="mpicxx" \
 	    CFLAGS="-fopenmp -D_REENTRANT -g -std=gnu99 -O3 -msse3 -mfpmath=sse -ffast-math -funroll-loops -fprefetch-loop-arrays -fomit-frame-pointer -ftree-vectorize -fassociative-math" \
 	    CXXFLAGS="-fopenmp -D_REENTRANT -g -std=c++11 -O3 -msse3 -mfpmath=sse -ffast-math -funroll-loops -fprefetch-loop-arrays -fomit-frame-pointer -ftree-vectorize -fassociative-math"
-	cd ${qdpxx_Ins_Dir}/build  && make  ${LOG_MAKE} && make install ${LOG_BUILD} 
+	cd ${qdpxx_Ins_Dir}/build  && make -j 4  ${LOG_MAKE} && make install ${LOG_BUILD} 
 	cd ${qdpxx_Ins_Dir}/build  && echo " $(shell date)" > DATE
 
 
 
-# === quda ===
-EIGEN_INCLUDE_DIR= ${HOME}/software/eigen/eigen-3.3.8
+
+
+# --------------------------------- Quda -------------------------------------
 quda_FLAGS = -S${quda_Src_Dir} -B${quda_Ins_Dir}/build   -DCMAKE_INSTALL_PREFIX=${quda_Ins_Dir}
 quda_FLAGS+= -DQUDA_QMP=ON -DQUDA_QMPHOME=${qmp_Ins_Dir} -DQUDA_MPI=OFF 
 quda_FLAGS+= -DQUDA_QIO=ON -DQUDA_QIOHOME=${qio_Ins_Dir} -DQUDA_LIMEHOME=${qio_Ins_Dir}
@@ -217,7 +239,7 @@ quda_FLAGS+= -DQUDA_DIRAC_TWISTED_MASS=ON -DQUDA_LINK_HISQ=OFF
 quda_FLAGS+= -DQUDA_MULTIGRID=ON          -DQUDA_INTERFACE_MILC=OFF 
 quda_FLAGS+= -DQUDA_BUILD_ALL_TESTS=ON    -DQUDA_BUILD_SHAREDLIB=ON 
 quda_FLAGS+= -DQUDA_TEX=OFF               -DCMAKE_BUILD_TYPE=DEVEL
-quda_FLAGS+= -DQUDA_DOWNLOAD_EIGEN=OFF    -DQUDA_USE_EIGEN=ON    -DEIGEN_INCLUDE_DIR=${EIGEN_INCLUDE_DIR}
+quda_FLAGS+= -DQUDA_DOWNLOAD_EIGEN=OFF    -DQUDA_USE_EIGEN=ON    -DEIGEN_INCLUDE_DIR=${EIGEN_PATH}
 
 quda_build=${quda_Ins_Dir}/build
 
@@ -225,26 +247,28 @@ install_quda:
 	mkdir ${quda_build} -p
 	rm ${quda_build}/* -rf
 	cd ${quda_build} && cmake  ${quda_FLAGS}
-	cd ${quda_build} && MPICC=mpicc MPICXX=mpicxx  make -j 8  ${LOG_MAKE}
+	cd ${quda_build} && make   ${LOG_MAKE}
 	cd ${quda_build} && make install  ${LOG_BUILD}
 	cd ${quda_build} && echo " $(shell date)" > DATE
 	
 
 
-# === chroma ===
+
+
+# --------------------------------- Chroma ------------------------------------
 chroma_FLAGS = --prefix=${chroma_Ins_Dir}
 chroma_FLAGS+= --with-qmp=${qmp_Ins_Dir}   --with-qio=${qio_Ins_Dir} 
 chroma_FLAGS+= --with-qdp=${qdpxx_Ins_Dir} --with-qla=${qla_Ins_Dir}
 chroma_FLAGS+= --with-qdpc=${qdp_Ins_Dir}  --with-qopqdp=${qopqdp_Ins_Dir}
+ifeq (${ChromaType},chroma_quda)
+	chroma_FLAGS+= --with-quda=${quda_Ins_Dir} --with-cuda=${CUDA_PATH}
+endif
+ifeq (${ChromaType},chroma_gpu)
+	chroma_FLAGS+= --with-quda=${quda_Ins_Dir} --with-cuda=${CUDA_PATH}
+endif
 chroma_FLAGS+= --enable-precision=${PRECISION} 
 chroma_FLAGS+= --enable-qop-mg --enable-parallel-arch=parscalar
 chroma_FLAGS+= --enable-sse --enable-sse3   --enable-sse-wilson-dslash 
-ifeq (${ChromaType},quda)
-    chroma_FLAGS+= --with-quda=${QUDA_PATH} --with-cuda=/gpfs/share/software/cuda/cuda-9.0
-endif
-ifeq (${ChromaType},gpu)
-    chroma_FLAGS+= --with-quda=${QUDA_PATH} --with-cuda=/gpfs/share/software/cuda/cuda-9.0
-endif
 
 install_chroma:
 	mkdir ${chroma_Ins_Dir}/build -p
@@ -253,9 +277,12 @@ install_chroma:
             FC=mpif90 CC=mpicc CXX=mpicxx \
             CFLAGS="-fopenmp -D_REENTRANT -g -std=gnu99 -O3 -mfpmath=sse -ffast-math -funroll-loops -fprefetch-loop-arrays -fomit-frame-pointer -ftree-vectorize -fassociative-math"  \
             CXXFLAGS="-fopenmp -D_REENTRANT -g -std=c++11 -O3 -mfpmath=sse -ffast-math -funroll-loops -fprefetch-loop-arrays -fomit-frame-pointer -ftree-vectorize -fassociative-math -fpermissive"
-	cd ${chroma_Ins_Dir}/build && make -j 8 ${LOG_MAKE} && make install ${LOG_BUILD} 
+	cd ${chroma_Ins_Dir}/build && make -j 4 ${LOG_MAKE} && make install ${LOG_BUILD} 
 	cd ${chroma_Ins_Dir}/build && echo " $(shell date)" > DATE
 	#./autogen.sh
+
+
+
 
 
 .PHONY: Target chroma
