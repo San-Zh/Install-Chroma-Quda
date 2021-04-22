@@ -17,7 +17,7 @@
 * install\_qdp
 * install\_qopqdp
 * install\_qdpxx
-* -install\_quda-
+* install\_quda
 * install\_chroma
 
 
