@@ -234,12 +234,13 @@ quda_FLAGS = -S${quda_Src_Dir} -B${quda_Ins_Dir}/build   -DCMAKE_INSTALL_PREFIX=
 quda_FLAGS+= -DQUDA_QMP=ON -DQUDA_QMPHOME=${qmp_Ins_Dir} -DQUDA_MPI=OFF 
 quda_FLAGS+= -DQUDA_QIO=ON -DQUDA_QIOHOME=${qio_Ins_Dir} -DQUDA_LIMEHOME=${qio_Ins_Dir}
 quda_FLAGS+= -DQUDA_GPU_ARCH=${GPU_ARCH}
-quda_FLAGS+= -DQUDA_DIRAC_STAGGERED=ON    -DQUDA_DIRAC_DOMAIN_WALL=OFF
-quda_FLAGS+= -DQUDA_DIRAC_TWISTED_MASS=ON -DQUDA_LINK_HISQ=OFF      
-quda_FLAGS+= -DQUDA_MULTIGRID=ON          -DQUDA_INTERFACE_MILC=OFF 
-quda_FLAGS+= -DQUDA_BUILD_ALL_TESTS=ON    -DQUDA_BUILD_SHAREDLIB=ON 
+quda_FLAGS+= -DQUDA_DIRAC_WILSON=ON       -DQUDA_DIRAC_TWISTED_MASS=ON 
+quda_FLAGS+= -DQUDA_DIRAC_CLOVER=ON       -DQUDA_DIRAC_TWISTED_CLOVER=ON   -DQUDA_DYNAMIC_CLOVER=ON
+quda_FLAGS+= -DQUDA_DIRAC_STAGGERED=ON    -DQUDA_LINK_HISQ=ON              -DQUDA_DIRAC_DOMAIN_WALL=ON
+quda_FLAGS+= -DQUDA_CONTRACT=ON           -DQUDA_CODEV=ON                  -DQUDA_MULTIGRID=ON    
+quda_FLAGS+= -DQUDA_INTERFACE_MILC=OFF    -DQUDA_BUILD_ALL_TESTS=ON        -DQUDA_BUILD_SHAREDLIB=ON 
+quda_FLAGS+= -DQUDA_DOWNLOAD_EIGEN=OFF    -DQUDA_USE_EIGEN=ON              -DEIGEN_INCLUDE_DIR=${EIGEN_PATH}
 quda_FLAGS+= -DQUDA_TEX=OFF               -DCMAKE_BUILD_TYPE=DEVEL
-quda_FLAGS+= -DQUDA_DOWNLOAD_EIGEN=OFF    -DQUDA_USE_EIGEN=ON    -DEIGEN_INCLUDE_DIR=${EIGEN_PATH}
 
 quda_build=${quda_Ins_Dir}/build
 
@@ -247,10 +248,10 @@ install_quda:
 	mkdir ${quda_build} -p
 	rm ${quda_build}/* -rf
 	cd ${quda_build} && cmake  ${quda_FLAGS}
-	cd ${quda_build} && make   ${LOG_MAKE}
-	cd ${quda_build} && make install  ${LOG_BUILD}
+	cd ${quda_build} && make -j 8   ${LOG_MAKE}
 	cd ${quda_build} && echo " $(shell date)" > DATE
-	
+        
+#	cd ${quda_build} && make install  ${LOG_BUILD}
 
 
 
